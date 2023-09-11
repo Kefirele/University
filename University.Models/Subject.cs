@@ -23,3 +23,4 @@ namespace University.Models
         public virtual ICollection<FacultyMember>? FacultyMembers { get; set; } = null;
     }
 }
+//zadanie 1 push
