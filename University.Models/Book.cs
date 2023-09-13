@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using University.Interfaces;
 
 namespace University.Models
 {
-    public class Book
+    public class Book : IBook
     {
         public long BookId { get; set; } = 0;
         public string Title { get; set; } = string.Empty;

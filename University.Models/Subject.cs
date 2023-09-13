@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using University.Interfaces;
 
 namespace University.Models
 {
-    public class Subject
+    public class Subject : ISubject
     {
         public long SubjectId { get; set; } = 0;
         public string Name { get; set; } = string.Empty;

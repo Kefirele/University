@@ -93,17 +93,6 @@ public class EditStudentViewModel : ViewModelBase, IDataErrorInfo
                     return "AdressLine2 is Required";
                 }
             }
-            if (columnName == "PostalCode")
-            {
-                if (string.IsNullOrEmpty(PostalCode))
-                {
-                    return "PostalCode is Required";
-                }
-                if (!PostalCode.IsValidPostalCode())
-                {
-                    return "PostalCode is invalid";
-                }
-            }
             return string.Empty;
         }
     }

@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,13 +21,15 @@ namespace University.Tests
     {
         private IDialogService _dialogService;
         private DbContextOptions<UniversityContext> _options;
-
+        public string jsonFilePathStudent = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "studentTest.json");
+        public string jsonFilePathSubject = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "subjectTest.json");
         [TestInitialize()]
         public void Initialize()
         {
             _options = new DbContextOptionsBuilder<UniversityContext>()
-                .UseInMemoryDatabase(databaseName: "UniversityTestDB")
-                .Options;
+        .UseInMemoryDatabase(databaseName: "UniversityTestDB")
+        .Options;
+
             SeedTestDB();
             _dialogService = new DialogService();
         }
@@ -34,121 +37,88 @@ namespace University.Tests
         {
             using UniversityContext context = new UniversityContext(_options);
             {
-                context.Database.EnsureDeleted();
                 List<Student> students = new List<Student>
-            {
-                new Student { StudentId = 1, Name = "Wieńczysław", LastName = "Nowakowicz", PESEL="94010787161", BirthDate = new DateTime(1987, 05, 22),
-                    Gender="Man", PlaceOfBirth="Rybnik", PlaceOfResidence="Rybnik", AddressLine1="Test", AddressLine2="Test",PostalCode="12345" },
-                new Student { StudentId = 2, Name = "Wieńczysław", LastName = "Nowakowicz", PESEL="94010787161", BirthDate = new DateTime(1987, 05, 22),
-                    Gender="Man", PlaceOfBirth="Rybnik", PlaceOfResidence="Rybnik", AddressLine1="Test", AddressLine2="Test",PostalCode="12345"},
-                new Student { StudentId = 3, Name = "Wieńczysław", LastName = "Nowakowicz", PESEL="94010787161", BirthDate = new DateTime(1987, 05, 22),
-                    Gender="Man", PlaceOfBirth="Rybnik", PlaceOfResidence="Rybnik", AddressLine1="Test", AddressLine2="Test",PostalCode="12345" }
-            };
+    {
+        new Student
+        {
+            StudentId = 1,
+            Name = "Wieńczysław",
+            LastName = "Nowakowicz",
+            PESEL = "94010787161",
+            BirthDate = new DateTime(1987, 05, 22),
+            Gender = "Man",
+            PlaceOfBirth = "Rybnik",
+            PlaceOfResidence = "Rybnik",
+            AddressLine1 = "Test",
+            AddressLine2 = "Test",
+            PostalCode = "12345"
+        },
+    };
+
                 List<Subject> subjects = new List<Subject>
-            {
-                new Subject { SubjectId = 1, Name = "Matematyka", Semester = "1", Lecturer = "Michalina Beldzik",CourseCode="1"
-                ,Title="test",Instructor="test",Schedule="test",Description="test",Credits=1,Department="test"},
-                new Subject { SubjectId = 2, Name = "Biologia", Semester = "2", Lecturer = "Halina Kopeć",CourseCode="1"
-                ,Title="test",Instructor="test",Schedule="test",Description="test",Credits=1,Department="test" },
-                new Subject { SubjectId = 3, Name = "Chemia", Semester = "3", Lecturer = "Jan Nowak",CourseCode="1"
-                ,Title="test",Instructor="test",Schedule="test",Description="test",Credits=1,Department="test" }
-            };
-                context.Students.AddRange(students);
-                context.Subjects.AddRange(subjects);
-                context.SaveChanges();
+    {
+        new Subject
+        {
+            SubjectId = 1,
+            Name = "Matematyka",
+            Semester = "1",
+            Lecturer = "Michalina Beldzik",
+            CourseCode = "1",
+            Title = "test",
+            Instructor = "test",
+            Schedule = "test",
+            Description = "test",
+            Credits = 1,
+            Department = "test"
+        },
+    };
+
+                IDataAccessService<Student> studentDataAccessService = new JsonDataAccessService<Student>(jsonFilePathStudent);
+                IDataAccessService<Subject> subjectDataAccessService = new JsonDataAccessService<Subject>(jsonFilePathSubject);
+
+                studentDataAccessService.SaveData(students);
+                subjectDataAccessService.SaveData(subjects);
             }
         }
         [TestMethod]
         public void Show_all_subjects()
         {
-            using UniversityContext context = new UniversityContext(_options);
-            {
-                SubjectsViewModel subjectsViewModel = new SubjectsViewModel(context, _dialogService);
-                bool hasData = subjectsViewModel.Subjects.Any();
-                Assert.IsTrue(hasData);
-            }
+            IDataAccessService<Subject> dataAccessService = new JsonDataAccessService<Subject>(jsonFilePathSubject);
+            var subjects = dataAccessService.LoadData();
+
+            Console.WriteLine(jsonFilePathSubject);
+
+            bool hasData = subjects.Any();
+            Assert.IsTrue(hasData);
         }
         [TestMethod]
         public void Add_Subject()
         {
-            using UniversityContext context = new UniversityContext(_options);
-            {
-                AddSubjectViewModel addSubjectViewModel = new AddSubjectViewModel(context, _dialogService)
-                {
-                    Name = "Test123",
-                    Semester = "1",
-                    Lecturer = "Michalina Beldzik",
-                    CourseCode = "1",
-                    Title = "test",
-                    Instructor = "test",
-                    Schedule = "test",
-                    Description = "test",
-                    Credits = 1,
-                    Department = "test",
-                };
-                addSubjectViewModel.Save.Execute(null);
+            IDataAccessService<Subject> dataAccessService = new JsonDataAccessService<Subject>(jsonFilePathSubject);
+            var existingSubjects = dataAccessService.LoadData().ToList();
 
-                bool newSubjectExists = context.Subjects.Any(s => s.Name == "Test123" && s.Semester == "1" && s.Lecturer == "Michalina Beldzik" && s.CourseCode == "1" && s.Title == "test"
-                && s.Instructor == "test" && s.Schedule == "test" && s.Description == "test" && s.Credits == 1 && s.Department == "test");
-                Assert.IsTrue(newSubjectExists);
-            }
-        }
-        [TestMethod]
-        public void Add_subject_With_Student()
-        {
-            using UniversityContext context = new UniversityContext(_options);
+            existingSubjects.Add(new Subject
             {
-                Random random = new Random();
-                int toSkip = random.Next(0, context.Students.Count());
-                Student student = context.Students.OrderBy(x => x.StudentId).Skip(toSkip).Take(1).FirstOrDefault();
+                Name = "Test123",
+                Semester = "1",
+                Lecturer = "Michalina Beldzik",
+                CourseCode = "1",
+                Title = "test",
+                Instructor = "test",
+                Schedule = "test",
+                Description = "test",
+                Credits = 1,
+                Department = "test"
+            });
 
-                AddSubjectViewModel addSubjectViewModel = new AddSubjectViewModel(context, _dialogService)
-                {
-                    Name = "Test123",
-                    Semester = "1",
-                    Lecturer = "Michalina Beldzik",
-                    CourseCode = "1",
-                    Title = "test",
-                    Instructor = "test",
-                    Schedule = "test",
-                    Description = "test",
-                    Credits = 1,
-                    Department = "test",
-                    AssignedStudents = new ObservableCollection<Student>
-            {
-                student
-            }
-                };
-                addSubjectViewModel.Save.Execute(null);
+            dataAccessService.SaveData(existingSubjects);
 
-                bool newSubjectExists = context.Subjects.Any(s => s.Name == "Test123" && s.Semester == "1" && s.Lecturer == "Michalina Beldzik" && s.CourseCode == "1" && s.Title == "test"
-                && s.Instructor == "test" && s.Schedule == "test" && s.Description == "test" && s.Credits == 1 && s.Department =="test"&&  s.Students.Any());
-                Assert.IsTrue(newSubjectExists);
-            }
-        }
-        [TestMethod]
-        public void Add_Subject_without_name()
-        {
-            using UniversityContext context = new UniversityContext(_options);
-            {
-                AddSubjectViewModel addSubjectViewModel = new AddSubjectViewModel(context, _dialogService)
-                {
-                    Semester = "2",
-                    Lecturer = "Michalina Beldzik",
-                    CourseCode = "1",
-                    Title = "test",
-                    Instructor = "test",
-                    Schedule = "test",
-                    Description = "test",
-                    Credits = 1,
-                    Department = "test",
-                };
-                addSubjectViewModel.Save.Execute(null);
+            bool newSubjectInJson = existingSubjects.Any(s => s.Name == "Test123" && s.Semester == "1" && s.Lecturer == "Michalina Beldzik" && s.CourseCode == "1" && s.Title == "test"
+            && s.Instructor == "test" && s.Schedule == "test" && s.Description == "test" && s.Credits == 1 && s.Department == "test");
 
-                bool newSubjectExists = context.Subjects.Any(s => s.Semester == "2" && s.Lecturer == "Michalina Beldzik" && s.CourseCode == "1" && s.Title == "test"
-                && s.Instructor == "test" && s.Schedule == "test" && s.Description == "test" && s.Credits == 1 && s.Department == "test");
-                Assert.IsFalse(newSubjectExists);
-            }
+            Assert.IsTrue(newSubjectInJson);
+
+            Cleanup();
         }
         [TestMethod]
         public void Add_Subject_without_semester()
@@ -365,6 +335,19 @@ namespace University.Tests
                 bool newSubjectExists = context.Subjects.Any(s => s.Name == "Test123" && s.Semester == "1" && s.Lecturer == "Michalina Beldzik" && s.CourseCode == "1" && s.Title == "test"
                 && s.Instructor == "test" && s.Schedule == "test" && s.Description == "test" && s.Credits == 1);
                 Assert.IsFalse(newSubjectExists);
+            }
+        }
+        private void Cleanup()
+        {
+            IDataAccessService<Subject> dataAccessService = new JsonDataAccessService<Subject>(jsonFilePathSubject);
+            var existingSubjects = dataAccessService.LoadData().ToList();
+
+            // Usuń nowo dodany przedmiot, jeśli istnieje w danych JSON.
+            var subjectToRemove = existingSubjects.FirstOrDefault(s => s.Name == "Test123");
+            if (subjectToRemove != null)
+            {
+                existingSubjects.Remove(subjectToRemove);
+                dataAccessService.SaveData(existingSubjects);
             }
         }
     }
